@@ -18,6 +18,7 @@ export * from "./services/audit-history-service.js";
 export * from "./services/agent-context-assembly-service.js";
 export * from "./services/canonical-note-service.js";
 export * from "./services/chunking-service.js";
+export * from "./services/derived-episode-context-service.js";
 export * from "./services/derived-episode-projection-service.js";
 export * from "./services/paid-execution-audit-helper.js";
 export * from "./services/context-namespace-service.js";
