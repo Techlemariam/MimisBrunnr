@@ -8,6 +8,7 @@ export * from "./common/service-result.js";
 export * from "./common/paid-execution-telemetry.js";
 export * from "./drafting/draft-note.contract.js";
 export * from "./history/create-session-archive.contract.js";
+export * from "./history/project-derived-episode.contract.js";
 export * from "./history/search-session-archives.contract.js";
 export * from "./history/get-decision-summary.contract.js";
 export * from "./history/query-history.contract.js";
