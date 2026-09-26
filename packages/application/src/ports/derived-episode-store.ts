@@ -8,4 +8,5 @@ export type DerivedEpisodePutResult =
 export interface DerivedEpisodeStore {
   putProjection(episode: DerivedEpisode): Promise<DerivedEpisodePutResult>;
   getByProjectionKey(projectionKey: string): Promise<DerivedEpisode | undefined>;
+  listByRepository(repository: string, limit: number): Promise<DerivedEpisode[]>;
 }
