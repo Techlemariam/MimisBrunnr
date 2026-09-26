@@ -40,6 +40,19 @@ export class SqliteDerivedEpisodeStore implements DerivedEpisodeStore {
     return row ? decodeEpisode(row) : undefined;
   }
 
+  async listByRepository(repository: string, limit: number): Promise<DerivedEpisode[]> {
+    const boundedLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
+    const rows = this.database.prepare(`
+      SELECT projection_key, payload_digest, episode_json, replay_count,
+             first_ingested_at, last_seen_at
+      FROM derived_episodes
+      WHERE repository = ?
+      ORDER BY first_ingested_at DESC, projection_key ASC
+      LIMIT ?
+    `).all(repository, boundedLimit) as unknown as EpisodeRow[];
+    return rows.map(decodeEpisode);
+  }
+
   async putProjection(episode: DerivedEpisode): Promise<DerivedEpisodePutResult> {
     this.database.exec("BEGIN IMMEDIATE");
     try {
