@@ -168,5 +168,5 @@ function canonicalJson(value: unknown): string {
       .sort(([left], [right]) => left.localeCompare(right));
     return `{${entries.map(([key, child]) => `${JSON.stringify(key)}:${canonicalJson(child)}`).join(",")}}`;
   }
-  return JSON.stringify(value);
+  return JSON.stringify(value) ?? "null";
 }
