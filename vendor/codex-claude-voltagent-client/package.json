@@ -47,13 +47,17 @@
     "plugin:bootstrap-default": "node ./plugins/codex-voltagent-default/scripts/bootstrap-default-runtime.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "@voltagent/core": "^2.7.2",
+    "@ai-sdk/provider": "3.0.14",
+    "@ai-sdk/provider-utils": "4.0.54",
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "@voltagent/core": "^2.10.0",
+    "ai": "6.0.168",
     "lru-cache": "^11.1.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "vite": "7.3.5",
+    "vitest": "^4.1.11"
   }
 }
