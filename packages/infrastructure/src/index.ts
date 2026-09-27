@@ -43,6 +43,7 @@ export * from "./sqlite/sqlite-auth-issuer-control-store.js";
 export * from "./sqlite/sqlite-issued-token-store.js";
 export * from "./sqlite/sqlite-local-agent-trace-store.js";
 export * from "./sqlite/sqlite-metadata-control-store.js";
+export * from "./sqlite/sqlite-memory-candidate-store.js";
 export * from "./sqlite/sqlite-session-archive-store.js";
 export * from "./sqlite/sqlite-toolbox-session-lease-store.js";
 export * from "./sqlite/sqlite-tool-output-store.js";

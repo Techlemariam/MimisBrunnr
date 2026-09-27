@@ -1,4 +1,5 @@
 export * from "./audit/audit-entry.js";
+export * from "./candidates/memory-candidate.js";
 export * from "./chunks/chunk-id.js";
 export * from "./chunks/chunk-record.js";
 export * from "./corpora/corpus-id.js";
