@@ -54,6 +54,9 @@ export interface RepoEvalPayload {
 interface RepoIndex {
   schemaVersion: 1;
   root: string;
+  indexedRevision: string | "unknown";
+  currentRevision?: string | "unknown";
+  validationFresh?: boolean | "unknown";
   createdAt: string;
   include: string[];
   exclude: string[];
@@ -352,6 +355,7 @@ export async function runRepoIndex(payload: JsonRecord): Promise<JsonRecord> {
   const index: RepoIndex = {
     schemaVersion: 1,
     root,
+    indexedRevision: await readGitRevision(root),
     createdAt: new Date().toISOString(),
     include: request.include,
     exclude,
@@ -367,6 +371,7 @@ export async function runRepoIndex(payload: JsonRecord): Promise<JsonRecord> {
     ok: true,
     indexPath: outputPath,
     root,
+    indexedRevision: index.indexedRevision,
     fileCount: indexedFiles.length,
     chunkCount: chunks.length,
     warnings
@@ -507,6 +512,7 @@ export async function runRepoEval(payload: JsonRecord): Promise<JsonRecord> {
   return {
     ok: true,
     indexPath: request.indexPath,
+    revision: revisionStatus(index),
     results,
     summary: {
       pass: results.filter((result) => result.status === "PASS").length,
@@ -555,6 +561,13 @@ function answerFromIndex(index: RepoIndex, request: RepoAnswerPayload): {
     scoreBreakdown: normalizeScoreBreakdown(chunk.scoreBreakdown)
   }));
   const warnings = [...index.warnings];
+  if (index.validationFresh === false) {
+    warnings.push(
+      `Repository index is stale: indexed revision ${index.indexedRevision}, current revision ${index.currentRevision}.`
+    );
+  } else if (index.validationFresh === "unknown") {
+    warnings.push("Repository revision freshness is unknown; index output is advisory only.");
+  }
   if (request.requireSourcePathCitations && citations.some((citation) => !citation.path.includes("."))) {
     warnings.push("One or more citations did not look like source file paths.");
   }
@@ -575,6 +588,7 @@ function answerFromIndex(index: RepoIndex, request: RepoAnswerPayload): {
     citations,
     retrievalHealth: {
       status: selected.length > 0 ? "lexical_only" : "unanswered",
+      revision: revisionStatus(index),
       lexicalCandidates: scored.length,
       deliveredCandidates: selected.length,
       intent,
@@ -813,7 +827,35 @@ async function loadRepoIndex(indexPath: string): Promise<RepoIndex> {
   if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.chunks) || !Array.isArray(parsed.files)) {
     throw new Error("Invalid repo index: unsupported schema.");
   }
-  return parsed as RepoIndex;
+  const index = parsed as RepoIndex;
+  index.indexedRevision ??= "unknown";
+  index.currentRevision = await readGitRevision(index.root);
+  index.validationFresh = index.indexedRevision === "unknown" || index.currentRevision === "unknown"
+    ? "unknown"
+    : index.indexedRevision === index.currentRevision;
+  return index;
+}
+
+async function readGitRevision(root: string): Promise<string | "unknown"> {
+  try {
+    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: root });
+    const revision = stdout.trim().toLowerCase();
+    return /^[0-9a-f]{40}$/.test(revision) ? revision : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+function revisionStatus(index: RepoIndex): {
+  indexedRevision: string | "unknown";
+  currentRevision: string | "unknown";
+  validationFresh: boolean | "unknown";
+} {
+  return {
+    indexedRevision: index.indexedRevision,
+    currentRevision: index.currentRevision ?? "unknown",
+    validationFresh: index.validationFresh ?? "unknown"
+  };
 }
 
 async function listTrackedFiles(root: string): Promise<string[]> {

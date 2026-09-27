@@ -174,6 +174,48 @@ test("repo evaluation CLI indexes tracked files and answers with source-path cit
   );
 });
 
+test("repo evaluation reports exact revision freshness and rejects old HEAD as fresh", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "mimir-repo-revision-"));
+  const repo = path.join(workspace, "repo");
+  const indexPath = path.join(workspace, "index", "repo-index.json");
+  await mkdir(repo, { recursive: true });
+  await writeFile(path.join(repo, "README.md"), "# Revision one\n", "utf8");
+  await execFileAsync("git", ["init"], { cwd: repo });
+  await execFileAsync("git", ["config", "user.name", "Mimir Test"], { cwd: repo });
+  await execFileAsync("git", ["config", "user.email", "mimir-test@example.invalid"], { cwd: repo });
+  await execFileAsync("git", ["add", "README.md"], { cwd: repo });
+  await execFileAsync("git", ["commit", "-m", "first"], { cwd: repo });
+  const firstRevision = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+
+  const index = await runCli("index-repo", {
+    root: repo,
+    include: ["README.md"],
+    outputPath: indexPath
+  });
+  assert.equal(index.indexedRevision, firstRevision);
+
+  const fresh = await runCli("answer-repo", {
+    indexPath,
+    query: "revision one"
+  });
+  assert.equal(fresh.retrievalHealth.revision.validationFresh, true);
+  assert.equal(fresh.retrievalHealth.revision.indexedRevision, firstRevision);
+
+  await writeFile(path.join(repo, "README.md"), "# Revision two\n", "utf8");
+  await execFileAsync("git", ["add", "README.md"], { cwd: repo });
+  await execFileAsync("git", ["commit", "-m", "second"], { cwd: repo });
+  const secondRevision = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+
+  const stale = await runCli("answer-repo", {
+    indexPath,
+    query: "revision one"
+  });
+  assert.equal(stale.retrievalHealth.revision.validationFresh, false);
+  assert.equal(stale.retrievalHealth.revision.indexedRevision, firstRevision);
+  assert.equal(stale.retrievalHealth.revision.currentRevision, secondRevision);
+  assert.match(stale.warnings.join("\n"), /index is stale/i);
+});
+
 async function runCli(command, payload) {
   const { stdout } = await execFileAsync(
     process.execPath,
