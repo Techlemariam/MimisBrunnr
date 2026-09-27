@@ -14,9 +14,9 @@ const allowedVoltAgentUuidAdvisory = {
           version: "9.0.1",
           paths: [
             "packages__infrastructure>@voltagent/core>uuid",
-            "packages\\infrastructure > @voltagent/core@2.7.2 > uuid@9.0.1",
-            "apps\\mimir-api > @mimir/infrastructure@link:../../packages/infrastructure > @voltagent/core@2.7.2 > uuid@9.0.1",
-            "vendor\\codex-claude-voltagent-client > @voltagent/core@2.7.2 > uuid@9.0.1"
+            "packages\\infrastructure > @voltagent/core@2.10.0 > uuid@9.0.1",
+            "apps\\mimir-api > @mimir/infrastructure@link:../../packages/infrastructure > @voltagent/core@2.10.0 > uuid@9.0.1",
+            "vendor\\codex-claude-voltagent-client > @voltagent/core@2.10.0 > uuid@9.0.1"
           ]
         }
       ],

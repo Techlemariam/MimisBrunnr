@@ -1741,7 +1741,7 @@ test("mimir-cli executes coding tasks through the vendored runtime bridge", asyn
 
   assert.equal(result.exitCode, 1, result.stderr);
   const payload = JSON.parse(result.stdout);
-  assert.equal(payload.status, "fail");
+  assert.equal(payload.status, "escalate");
   assert.doesNotMatch(payload.reason, /allowed_patch_root|LOCAL_EXPERT_REPO_ROOT/i);
 });
 
@@ -4072,9 +4072,9 @@ test("mimir-api exposes coding execution through the root orchestrator", async (
     })
   });
 
-  assert.equal(response.status, 422);
+  assert.equal(response.status, 409);
   const payload = await response.json();
-  assert.equal(payload.status, "fail");
+  assert.equal(payload.status, "escalate");
   assert.doesNotMatch(payload.reason, /allowed_patch_root|LOCAL_EXPERT_REPO_ROOT/i);
 });
 

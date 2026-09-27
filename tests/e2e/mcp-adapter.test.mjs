@@ -404,7 +404,7 @@ test("mimir-mcp serves initialize, tools/list, review tools, context tools, and 
 
   const codingResponse = await transport.next();
   assert.equal(codingResponse.result.isError, false);
-  assert.equal(codingResponse.result.structuredContent.status, "fail");
+  assert.equal(codingResponse.result.structuredContent.status, "escalate");
   assert.doesNotMatch(
     codingResponse.result.structuredContent.reason,
     /allowed_patch_root|LOCAL_EXPERT_REPO_ROOT/i
