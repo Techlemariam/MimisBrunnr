@@ -10,11 +10,11 @@ export const ALLOWED_AUDIT_ADVISORIES = [
     severity: "moderate",
     allowedPathPatterns: [
       /^packages__infrastructure>@voltagent\/core>uuid$/u,
-      /^(packages\/infrastructure|vendor\/codex-claude-voltagent-client)>@voltagent\/core@2\.7\.\d+>uuid@9\.0\.1$/u,
-      /^apps\/mimir-(api|cli|control-mcp|mcp|toolbox-mcp)>@mimir\/infrastructure@[^>]+>@voltagent\/core@2\.7\.\d+>uuid@9\.0\.1$/u
+      /^(packages\/infrastructure|vendor\/codex-claude-voltagent-client)>@voltagent\/core@2\.10\.\d+>uuid@9\.0\.1$/u,
+      /^apps\/mimir-(api|cli|control-mcp|mcp|toolbox-mcp)>@mimir\/infrastructure@[^>]+>@voltagent\/core@2\.10\.\d+>uuid@9\.0\.1$/u
     ],
     rationale:
-      "@voltagent/core 2.7.x depends on uuid ^9.0.1. uuid >=14 is the patched line, but a forced override would change the transitive dependency outside the upstream package contract. Remove this exception when VoltAgent publishes a compatible patched dependency."
+      "@voltagent/core 2.10.x still depends on uuid ^9.0.1. uuid >=14 is the patched line, but a forced override would change the transitive dependency outside the upstream package contract. Remove this exception when VoltAgent publishes a compatible patched dependency."
   }
 ];
 
