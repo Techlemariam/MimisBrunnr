@@ -37,6 +37,7 @@ export * from "./providers/voltagent-reasoning-adapter.js";
 export * from "./sqlite/sqlite-audit-log.js";
 export * from "./sqlite/sqlite-context-namespace-store.js";
 export * from "./sqlite/sqlite-context-representation-store.js";
+export * from "./sqlite/sqlite-derived-episode-store.js";
 export * from "./sqlite/sqlite-import-job-store.js";
 export * from "./sqlite/sqlite-auth-issuer-control-store.js";
 export * from "./sqlite/sqlite-issued-token-store.js";

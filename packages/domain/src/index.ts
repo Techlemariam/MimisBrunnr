@@ -3,6 +3,7 @@ export * from "./chunks/chunk-id.js";
 export * from "./chunks/chunk-record.js";
 export * from "./corpora/corpus-id.js";
 export * from "./contexts/index.js";
+export * from "./episodes/derived-episode.js";
 export * from "./imports/import-artifact-state.js";
 export * from "./imports/import-job.js";
 export * from "./lifecycle/note-lifecycle-state.js";

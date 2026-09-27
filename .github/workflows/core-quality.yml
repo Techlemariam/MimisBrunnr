@@ -16,6 +16,7 @@ on:
       - "tests/e2e/security-audit.test.mjs"
       - "tests/e2e/transport-adapters.test.mjs"
       - "tests/e2e/mcp-adapter.test.mjs"
+      - "tests/e2e/derived-episode-projection.test.mjs"
       - "scripts/audit-security.mjs"
       - "scripts/update-codesight-routes.mjs"
       - "scripts/lib/command-surface-report.mjs"
@@ -38,6 +39,7 @@ on:
       - "tests/e2e/security-audit.test.mjs"
       - "tests/e2e/transport-adapters.test.mjs"
       - "tests/e2e/mcp-adapter.test.mjs"
+      - "tests/e2e/derived-episode-projection.test.mjs"
       - "scripts/audit-security.mjs"
       - "scripts/update-codesight-routes.mjs"
       - "scripts/lib/command-surface-report.mjs"
@@ -64,3 +66,4 @@ jobs:
       - run: pnpm security:audit
       - run: pnpm test:command-surface
       - run: pnpm test:transport
+      - run: pnpm build && node --test tests/e2e/derived-episode-projection.test.mjs
