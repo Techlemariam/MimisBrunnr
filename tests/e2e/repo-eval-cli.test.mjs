@@ -83,6 +83,58 @@ test("repo evaluation CLI indexes tracked files and answers with source-path cit
     false
   );
 
+  const packetAnswer = await runCli("answer-repo", {
+    indexPath,
+    repository: "example/panopticon",
+    query: "Vilka dokument beskriver restore, backup och rollback?",
+    excludeFromAnswer: ["docs/evaluations/"],
+    contextPacketBudget: {
+      maxTokens: 500,
+      maxSources: 2,
+      maxRawExcerpts: 1,
+      maxSummarySentences: 1
+    }
+  });
+  assert.equal(packetAnswer.contextPacket.schemaVersion, "mimisbrunnr.repository-context-packet/v1");
+  assert.equal(packetAnswer.contextPacket.authority, "advisory");
+  assert.equal(packetAnswer.contextPacket.canonical, false);
+  assert.equal(packetAnswer.contextPacket.instructionAuthority, "none");
+  assert.equal(packetAnswer.contextPacket.repository, "example/panopticon");
+  assert.ok(packetAnswer.contextPacket.budgetUsage.tokenEstimate <= 500);
+  assert.ok(packetAnswer.contextPacket.budgetUsage.sourceCount <= 2);
+  assert.ok(packetAnswer.contextPacket.budgetUsage.rawExcerptCount <= 1);
+  assert.equal(
+    packetAnswer.contextPacket.evidence.some((item) => item.path.startsWith("docs/evaluations/")),
+    false
+  );
+
+  const missingAnswer = await runCli("answer-repo", {
+    indexPath,
+    repository: "example/panopticon",
+    query: "zzyzxquux",
+    contextPacketBudget: {
+      maxTokens: 500,
+      maxSources: 2,
+      maxRawExcerpts: 0,
+      maxSummarySentences: 1
+    }
+  });
+  assert.equal(missingAnswer.contextPacket.evidence.length, 0);
+  assert.match(missingAnswer.contextPacket.uncertainties.join("\n"), /no repository evidence/i);
+
+  await assert.rejects(
+    runCli("answer-repo", {
+      indexPath,
+      query: "restore",
+      contextPacketBudget: {
+        maxTokens: 500,
+        maxSources: 2,
+        maxRawExcerpts: 0,
+        maxSummarySentences: 1
+      }
+    })
+  );
+
   const evaluation = await runCli("eval-repo", {
     indexPath,
     tests: [
@@ -214,6 +266,22 @@ test("repo evaluation reports exact revision freshness and rejects old HEAD as f
   assert.equal(stale.retrievalHealth.revision.indexedRevision, firstRevision);
   assert.equal(stale.retrievalHealth.revision.currentRevision, secondRevision);
   assert.match(stale.warnings.join("\n"), /index is stale/i);
+
+  const stalePacket = await runCli("answer-repo", {
+    indexPath,
+    repository: "example/revision-test",
+    query: "revision one",
+    contextPacketBudget: {
+      maxTokens: 500,
+      maxSources: 2,
+      maxRawExcerpts: 0,
+      maxSummarySentences: 1
+    }
+  });
+  assert.equal(stalePacket.contextPacket.validationFresh, false);
+  assert.equal(stalePacket.contextPacket.indexedRevision, firstRevision);
+  assert.equal(stalePacket.contextPacket.currentRevision, secondRevision);
+  assert.match(stalePacket.contextPacket.uncertainties.join("\n"), /stale/i);
 });
 
 async function runCli(command, payload) {

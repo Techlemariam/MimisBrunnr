@@ -15,6 +15,7 @@ export * from "./notes/note-frontmatter.js";
 export * from "./notes/note-id.js";
 export * from "./notes/note-type.js";
 export * from "./retrieval/context-packet.js";
+export * from "./retrieval/repository-context-packet.js";
 export * from "./retrieval/retrieval-trace.js";
 export * from "./sessions/session-archive.js";
 export * from "./tags/controlled-tag.js";

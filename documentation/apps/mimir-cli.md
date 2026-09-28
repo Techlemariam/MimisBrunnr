@@ -145,6 +145,8 @@ corepack pnpm cli -- index-repo --json "{\"root\":\"C:\\\\Users\\\\alexa\\\\Work
 
 corepack pnpm cli -- answer-repo --json "{\"indexPath\":\"C:\\\\Users\\\\alexa\\\\AppData\\\\Local\\\\Temp\\\\panopticon-repo-index.json\",\"query\":\"Vilka dokument beskriver restore, backup och rollback i Panopticon?\",\"excludeFromAnswer\":[\"docs/evaluations/\"],\"rankingProfile\":\"panopticon\",\"intentHint\":\"repo_orientation\",\"maxSources\":8}"
 
+corepack pnpm cli -- answer-repo --json "{\"indexPath\":\"C:\\\\Users\\\\alexa\\\\AppData\\\\Local\\\\Temp\\\\panopticon-repo-index.json\",\"repository\":\"example/panopticon\",\"query\":\"Vilka dokument beskriver restore?\",\"contextPacketBudget\":{\"maxTokens\":500,\"maxSources\":3,\"maxRawExcerpts\":1,\"maxSummarySentences\":1}}"
+
 corepack pnpm cli -- search-context --json "{\"query\":\"toolbox rollout readiness\",\"corpusIds\":[\"general_notes\",\"mimisbrunnr\"]}"
 
 corepack pnpm cli -- list-toolboxes --json "{}"
@@ -170,6 +172,12 @@ debugging missing or surprising citations. The eval summary includes
 `passRate`, `partialCreditRate`, suite-level `meanReciprocalRank`,
 `groundedTermRate`, `forbiddenViolationCount`, and `scoreOutOf10` for comparing
 quality across runs.
+
+When `contextPacketBudget` is supplied, `answer-repo` also emits the canonical
+`mimisbrunnr.repository-context-packet/v1` shape. `repository` is then required
+as a globally qualified `owner/name`. The packet is advisory, has no instruction
+authority, preserves indexed/current revision and freshness, and fails to an
+explicit uncertainty when no lexically grounded evidence matches.
 `search-context`,
 `assemble-agent-context`, and `fetch-decision-summary` use the shared default
 context budget when `budget` is omitted.
