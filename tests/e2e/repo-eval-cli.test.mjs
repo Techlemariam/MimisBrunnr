@@ -122,6 +122,20 @@ test("repo evaluation CLI indexes tracked files and answers with source-path cit
   assert.equal(missingAnswer.contextPacket.evidence.length, 0);
   assert.match(missingAnswer.contextPacket.uncertainties.join("\n"), /no repository evidence/i);
 
+  const missingNamedPolicy = await runCli("answer-repo", {
+    indexPath,
+    repository: "example/panopticon",
+    query: "Where is the canonical policy for the fictional ZEPHYR_ORANGE production override?",
+    contextPacketBudget: {
+      maxTokens: 500,
+      maxSources: 2,
+      maxRawExcerpts: 0,
+      maxSummarySentences: 1
+    }
+  });
+  assert.equal(missingNamedPolicy.contextPacket.evidence.length, 0);
+  assert.match(missingNamedPolicy.contextPacket.uncertainties.join("\n"), /zephyr_orange/i);
+
   await assert.rejects(
     runCli("answer-repo", {
       indexPath,
