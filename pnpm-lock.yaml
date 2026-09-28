@@ -36,6 +36,9 @@ importers:
       '@mimir/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@mimir/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@mimir/infrastructure':
         specifier: workspace:*
         version: link:../../packages/infrastructure

@@ -3,6 +3,10 @@ import { execFile } from "node:child_process";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
+import type {
+  RepositoryContextPacket,
+  RepositoryContextPacketBudget
+} from "@mimir/domain";
 
 const execFileAsync = promisify(execFile);
 
@@ -19,6 +23,8 @@ export interface RepoIndexPayload {
 export interface RepoAnswerPayload {
   indexPath: string;
   query: string;
+  repository?: string;
+  contextPacketBudget?: RepositoryContextPacketBudget;
   maxSources?: number;
   excludeFromAnswer?: string[];
   rankingProfile?: RepoRankingProfile;
@@ -537,6 +543,7 @@ function answerFromIndex(index: RepoIndex, request: RepoAnswerPayload): {
   }>;
   retrievalHealth: JsonRecord;
   warnings: string[];
+  contextPacket?: RepositoryContextPacket;
 } {
   const maxSources = request.maxSources ?? 8;
   const excluded = request.excludeFromAnswer ?? [];
@@ -575,6 +582,10 @@ function answerFromIndex(index: RepoIndex, request: RepoAnswerPayload): {
     warnings.push("No answerable source chunks matched the query.");
   }
 
+  const contextPacket = request.contextPacketBudget && request.repository
+    ? compileRepositoryContextPacket(index, request, selected, warnings)
+    : undefined;
+
   return {
     query: request.query,
     intent,
@@ -605,8 +616,86 @@ function answerFromIndex(index: RepoIndex, request: RepoAnswerPayload): {
         ...warnings
       ]
     },
-    warnings
+    warnings,
+    ...(contextPacket ? { contextPacket } : {})
   };
+}
+
+function compileRepositoryContextPacket(
+  index: RepoIndex,
+  request: RepoAnswerPayload & {
+    repository?: string;
+    contextPacketBudget?: RepositoryContextPacketBudget;
+  },
+  selected: ScoredChunk[],
+  warnings: string[]
+): RepositoryContextPacket {
+  const budget = request.contextPacketBudget!;
+  const grounded = selected.filter((chunk) => chunk.matchedTerms.length > 0);
+  let sourceLimit = Math.min(budget.maxSources, grounded.length);
+  let excerptLimit = Math.min(budget.maxRawExcerpts, sourceLimit);
+
+  while (true) {
+    const evidence = grounded.slice(0, sourceLimit).map((chunk, index) => ({
+      repository: request.repository!,
+      path: chunk.path,
+      headingPath: chunk.headingPath,
+      chunkId: chunk.id,
+      ...(index < excerptLimit ? { excerpt: summarizeChunk(chunk) } : {})
+    }));
+    const uncertainties = grounded.length === 0
+      ? ["No repository evidence matched the query."]
+      : index.validationFresh === true
+        ? []
+        : [index.validationFresh === false
+            ? "Repository evidence is stale relative to current HEAD."
+            : "Repository revision freshness is unknown."];
+    const packet: RepositoryContextPacket = {
+      schemaVersion: "mimisbrunnr.repository-context-packet/v1",
+      authority: "advisory",
+      canonical: false,
+      instructionAuthority: "none",
+      repository: request.repository!,
+      indexedRevision: index.indexedRevision,
+      currentRevision: index.currentRevision ?? "unknown",
+      validationFresh: index.validationFresh ?? "unknown",
+      query: request.query,
+      summary: budget.maxSummarySentences === 0
+        ? ""
+        : grounded.length > 0
+          ? `Found ${grounded.length} bounded repository source chunk(s).`
+          : "No repository source chunks matched the query.",
+      evidence,
+      warnings,
+      uncertainties,
+      budgetUsage: {
+        tokenEstimate: 0,
+        sourceCount: evidence.length,
+        rawExcerptCount: evidence.filter((item) => item.excerpt !== undefined).length
+      }
+    };
+    packet.budgetUsage.tokenEstimate = estimateJsonTokens(packet);
+    if (packet.budgetUsage.tokenEstimate <= budget.maxTokens) {
+      return packet;
+    }
+    if (excerptLimit > 0) {
+      excerptLimit -= 1;
+      continue;
+    }
+    if (sourceLimit > 0) {
+      sourceLimit -= 1;
+      continue;
+    }
+    packet.summary = "Repository context omitted: packet budget too small.";
+    packet.warnings = [];
+    packet.uncertainties = ["No evidence fits within the requested packet budget."];
+    packet.budgetUsage.tokenEstimate = estimateJsonTokens(packet);
+    return packet;
+  }
+}
+
+function estimateJsonTokens(value: unknown): number {
+  return Math.ceil(JSON.stringify(value).length / 4);
 }
 
 function parseRepoIndexPayload(payload: JsonRecord): RepoIndexPayload {
@@ -622,9 +711,22 @@ function parseRepoIndexPayload(payload: JsonRecord): RepoIndexPayload {
 }
 
 function parseRepoAnswerPayload(payload: JsonRecord): RepoAnswerPayload {
+  const contextPacketBudget = optionalContextPacketBudget(
+    payload.contextPacketBudget,
+    "contextPacketBudget"
+  );
+  const repository = optionalString(payload.repository, "repository");
+  if (contextPacketBudget && !repository) {
+    throw new Error("Invalid field 'repository': required when contextPacketBudget is provided.");
+  }
+  if (repository && !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+    throw new Error("Invalid field 'repository': must be globally qualified as owner/repository.");
+  }
   return {
     indexPath: requireString(payload.indexPath, "indexPath"),
     query: requireString(payload.query, "query"),
+    repository,
+    contextPacketBudget,
     maxSources: optionalPositiveInteger(payload.maxSources, "maxSources"),
     excludeFromAnswer: optionalStringArray(payload.excludeFromAnswer, "excludeFromAnswer"),
     rankingProfile: optionalRankingProfile(payload.rankingProfile, "rankingProfile"),
@@ -633,6 +735,32 @@ function parseRepoAnswerPayload(payload: JsonRecord): RepoAnswerPayload {
     requireSourcePathCitations: payload.requireSourcePathCitations === undefined
       ? true
       : requireBoolean(payload.requireSourcePathCitations, "requireSourcePathCitations")
+  };
+}
+
+function optionalContextPacketBudget(
+  value: unknown,
+  field: string
+): RepositoryContextPacketBudget | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`Invalid field '${field}': must be an object.`);
+  }
+  const record = value as JsonRecord;
+  const allowed = new Set(["maxTokens", "maxSources", "maxRawExcerpts", "maxSummarySentences"]);
+  const unknown = Object.keys(record).filter((key) => !allowed.has(key));
+  if (unknown.length > 0) {
+    throw new Error(`Invalid field '${field}': unknown field(s): ${unknown.join(", ")}.`);
+  }
+  const maxTokens = requirePositiveInteger(record.maxTokens, `${field}.maxTokens`);
+  if (maxTokens < 256) {
+    throw new Error(`Invalid field '${field}.maxTokens': must be at least 256.`);
+  }
+  return {
+    maxTokens,
+    maxSources: requirePositiveInteger(record.maxSources, `${field}.maxSources`),
+    maxRawExcerpts: requireNonNegativeInteger(record.maxRawExcerpts, `${field}.maxRawExcerpts`),
+    maxSummarySentences: requireNonNegativeInteger(record.maxSummarySentences, `${field}.maxSummarySentences`)
   };
 }
 
@@ -1167,6 +1295,21 @@ function optionalPositiveInteger(value: unknown, field: string): number | undefi
   }
   if (!Number.isInteger(value) || Number(value) < 1) {
     throw new Error(`Invalid field '${field}': must be a positive integer.`);
+  }
+  return Number(value);
+}
+
+function requirePositiveInteger(value: unknown, field: string): number {
+  const parsed = optionalPositiveInteger(value, field);
+  if (parsed === undefined) {
+    throw new Error(`Invalid field '${field}': must be a positive integer.`);
+  }
+  return parsed;
+}
+
+function requireNonNegativeInteger(value: unknown, field: string): number {
+  if (!Number.isInteger(value) || Number(value) < 0) {
+    throw new Error(`Invalid field '${field}': must be a non-negative integer.`);
   }
   return Number(value);
 }

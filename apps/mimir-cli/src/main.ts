@@ -1468,7 +1468,7 @@ Notes:
   - auth-issued-tokens accepts optional JSON input with actor, actorId, asOf, includeRevoked, issuedByActorId, revokedByActorId, lifecycleStatus, and limit.
   - auth-introspect-token expects JSON input with token and optional asOf, expectedTransport, expectedCommand, or expectedAdministrativeAction.
   - index-repo expects JSON input with root, include, optional exclude, outputPath, and denyPrivateIpPatterns. outputPath must be outside the indexed repo root.
-  - answer-repo expects JSON input with indexPath, query, optional maxSources, excludeFromAnswer, rankingProfile, intentHint, sourceWeights, and requireSourcePathCitations.
+  - answer-repo expects JSON input with indexPath, query, optional maxSources, excludeFromAnswer, rankingProfile, intentHint, sourceWeights, and requireSourcePathCitations. An optional contextPacketBudget requires a globally qualified repository (owner/name) and emits an advisory, revision-bound repository context packet.
   - eval-repo expects JSON input with indexPath and tests; each test has id, prompt, optional expectedFiles, expectedAnyFiles, forbiddenFiles, minExpectedFiles, maxExpectedRank, mustIncludeTerms, groundingTerms, requireGroundedTerms, forbiddenTerms, excludeFromAnswer, intentHint, and sourceWeights.
   - check-mcp-profiles accepts optional JSON input with manifestDirectory.
   - list-toolbox-servers accepts optional JSON input with manifestDirectory and returns compiled server summaries.
