@@ -631,7 +631,13 @@ function compileRepositoryContextPacket(
   warnings: string[]
 ): RepositoryContextPacket {
   const budget = request.contextPacketBudget!;
-  const grounded = selected.filter((chunk) => chunk.matchedTerms.length > 0);
+  const requiredLiterals = requiredLiteralTerms(request.query);
+  const missingRequiredLiterals = requiredLiterals.filter(
+    (term) => !selected.some((chunk) => chunk.matchedTerms.includes(term))
+  );
+  const grounded = missingRequiredLiterals.length > 0
+    ? []
+    : selected.filter((chunk) => chunk.matchedTerms.length > 0);
   let sourceLimit = Math.min(budget.maxSources, grounded.length);
   let excerptLimit = Math.min(budget.maxRawExcerpts, sourceLimit);
 
@@ -643,8 +649,10 @@ function compileRepositoryContextPacket(
       chunkId: chunk.id,
       ...(index < excerptLimit ? { excerpt: summarizeChunk(chunk) } : {})
     }));
-    const uncertainties = grounded.length === 0
-      ? ["No repository evidence matched the query."]
+    const uncertainties = missingRequiredLiterals.length > 0
+      ? [`Required literal term(s) were not grounded: ${missingRequiredLiterals.join(", ")}.`]
+      : grounded.length === 0
+        ? ["No repository evidence matched the query."]
       : index.validationFresh === true
         ? []
         : [index.validationFresh === false
@@ -692,6 +700,13 @@ function compileRepositoryContextPacket(
     packet.budgetUsage.tokenEstimate = estimateJsonTokens(packet);
     return packet;
   }
+}
+
+function requiredLiteralTerms(query: string): string[] {
+  return [...new Set(
+    [...query.matchAll(/\b[A-Za-z0-9]+_[A-Za-z0-9_]+\b/g)]
+      .map((match) => normalizeSearchText(match[0]))
+  )];
 }
 
 function estimateJsonTokens(value: unknown): number {
